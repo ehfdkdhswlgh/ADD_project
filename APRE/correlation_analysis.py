@@ -1,7 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from prefixspan import PrefixSpan
 
 
 
@@ -64,6 +63,8 @@ df = pd.DataFrame(int_lists, columns=column)
 df_corr = df.corr()
 print(df_corr)
 sns.heatmap(df_corr)
+
+#...
 
 
 
