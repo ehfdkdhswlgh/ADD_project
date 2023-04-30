@@ -1,56 +1,75 @@
-def improved_ac_algorithm(Str, threshold, Suppmin):
-    n = len(Str)
-    buffer1, buffer2, buffer3, buffer4 = [], [], [], []
-    StateTree = {}  # dictionary to store the frequent sequences
-    Len = 4
+import random
+from collections import defaultdict
 
-    # build a 1 -> Len bit sequences tree State.T ree by enumerating its nodes
-    for i in range(2 ** Len):
-        sequence = format(i, 'b').zfill(Len)
-        StateTree[sequence] = 0
+def bytearray_to_bin(byte_array):
+    return ''.join(format(byte, '08b') for byte in byte_array)
 
-    # build the root node
-    root = {'0': None, '1': None}
+def generate_bytearray_sequences(num_sequences, sequence_length):
+    sequences = []
+    for _ in range(num_sequences):
+        sequence = bytearray(random.getrandbits(8) for _ in range(sequence_length))
+        sequences.append(sequence)
+    return sequences
 
-    # build the child sequence node Qm
-    for m in range(Len):
-        curr_node = root
-        for j in range(m):
-            curr_node = curr_node['0']
-        curr_node['0'] = {'0': None, '1': None}
-        curr_node['1'] = {'0': None, '1': None}
+def increment_counter(state_tree, sequence):
+    state_tree[sequence] += 1
+    return state_tree
 
-    # set a counter for each four-bit state
-    Data = Str[0]
-    for i in range(1, n):
-        if i % 1000 == 0:  # print progress every 1000 bits
-            print("Processed", i, "bits out of", n)
-        if i <= 3:
-            buffer1.append(Data)
-            buffer2.append(Data)
-            buffer3.append(Data)
-        else:
-            buffer1.append(Data)
-            buffer2.append(buffer1[-2])
-            buffer3.append(buffer1[-3])
-            buffer4.append(buffer1[-4])
+def improved_ac_algorithm(byte_array_list, threshold, min_len, max_len):
+    bit_stream_list = [bytearray_to_bin(byte_array) for byte_array in byte_array_list]
+    n = len(bit_stream_list)
+    state_tree = defaultdict(int)
 
-            # read buffer4[] and traverse the StateTree to get the state
-            state = "".join(buffer4)
-            curr_node = StateTree
-            for bit in state:
-                curr_node = curr_node[bit]
-            curr_node += 1
+    for bit_stream in bit_stream_list:
+        local_state_tree = defaultdict(int)
+        for length in range(min_len, min(max_len + 1, len(bit_stream) + 1)):
+            for i in range(len(bit_stream) - length + 1):
+                sequence = bit_stream[i:i + length]
+                increment_counter(local_state_tree, sequence)
+        for sequence, count in local_state_tree.items():
+            if count > 0:
+                state_tree[sequence] += 1
 
-        Data = Str[i]
-
-    # write corresponding sequences into D
-    D = set()
-    Suppmin = ((n - Len + 1) / (2 ** Len)) * threshold
-    for state, count in StateTree.items():
-        if count > Suppmin:
-            for i in range(n - Len + 1):
-                if Str[i:i + Len] == state:
-                    D.add(state)
+    supp_min = {length: (n - length + 1) / (2 ** length) * threshold for length in range(min_len, max_len + 1)}
+    D = []
+    seen_sequences = set()
+    for sequence, count in state_tree.items():
+        if count > supp_min[len(sequence)] and (count / n) * 100 >= threshold * 100:
+            hex_sequence = f"0x{int(sequence, 2):0{len(sequence) // 4}X}"
+            if hex_sequence not in seen_sequences:
+                D.append({
+                    "length": len(sequence),
+                    "The frequent sequence": hex_sequence,
+                    "Frequency": f"{(count / n) * 100:.1f}%",
+                })
+                seen_sequences.add(hex_sequence)
 
     return D
+
+
+
+
+import pyshark
+packets = pyshark.FileCapture(
+            input_file='../Pcaps/ARP.pcapng',
+            use_json=True,
+            include_raw=True,
+            display_filter="eth.dst.ig == 1",
+          )._packets_from_tshark_sync()
+byte_array_list = []
+for packet in packets:
+    hex = packet.frame_raw.value
+    byte_array_list.append(bytearray.fromhex(hex))
+
+
+
+threshold = 0.9
+#0.3 : 빈도수 30% 이상
+#0.8 : 빈도수 80% 이상,
+
+min_len = 16
+max_len = 100
+
+result = improved_ac_algorithm(byte_array_list, threshold, min_len, max_len)
+# print(result)
+print("The frequent sequences set D:", result)
