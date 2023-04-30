@@ -1,8 +1,8 @@
 import pyshark
 
 
-##### display_filter="eth.dst.ig == 1" 는 브로드캐스트 패킷만 가져올 수 있고
-##### display_filter="eth.dst.ig != 1" 는 유니캐스트 패킷만 가져올 수 있다
+#### display_filter="eth.dst.ig == 1" 는 브로드캐스트 패킷만 가져올 수 있고
+#### display_filter="eth.dst.ig != 1" 는 유니캐스트 패킷만 가져올 수 있다
 
 packets = pyshark.FileCapture(
             input_file='../Pcaps/ARP.pcapng',

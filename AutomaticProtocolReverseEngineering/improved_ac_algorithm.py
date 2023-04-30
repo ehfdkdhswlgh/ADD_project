@@ -65,7 +65,7 @@ for packet in packets:
 
 threshold = 0.9
 #0.3 : 빈도수 30% 이상
-#0.8 : 빈도수 80% 이상
+#0.8 : 빈도수 80% 이상,
 
 min_len = 16
 max_len = 100
