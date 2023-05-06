@@ -1,15 +1,7 @@
-import random
 from collections import defaultdict
 
 def bytearray_to_bin(byte_array):
     return ''.join(format(byte, '08b') for byte in byte_array)
-
-def generate_bytearray_sequences(num_sequences, sequence_length):
-    sequences = []
-    for _ in range(num_sequences):
-        sequence = bytearray(random.getrandbits(8) for _ in range(sequence_length))
-        sequences.append(sequence)
-    return sequences
 
 def increment_counter(state_tree, sequence):
     state_tree[sequence] += 1
@@ -54,7 +46,7 @@ packets = pyshark.FileCapture(
             input_file='../Pcaps/ARP.pcapng',
             use_json=True,
             include_raw=True,
-            display_filter="eth.dst.ig == 1",
+            display_filter="eth.dst.ig == 1", # 브로드캐스트 패킷
           )._packets_from_tshark_sync()
 byte_array_list = []
 for packet in packets:
@@ -62,13 +54,18 @@ for packet in packets:
     byte_array_list.append(bytearray.fromhex(hex))
 
 
+print("입력 패킷의 수")
+print(byte_array_list.__len__())
 
-threshold = 0.3
+
+
+
+threshold = 0.5
 #0.3 : 빈도수 30% 이상
 #0.8 : 빈도수 80% 이상,
 
 min_len = 16
-max_len = 200
+max_len = 160
 
 result = improved_ac_algorithm(byte_array_list, threshold, min_len, max_len)
 print("The frequent sequences set D:", len(result))
@@ -121,9 +118,14 @@ def parallel_filter_sequences_by_edit_distance(sequences, max_edit_distance):
 
     filtered_sequences = []
     for seq in sorted_sequences:
-        index = bisect.bisect_left(filtered_sequences, seq)
-        if index == 0 or edit_distance(seq, filtered_sequences[index - 1]) > max_edit_distance:
-            bisect.insort(filtered_sequences, seq)
+        is_unique = True
+        for other_seq in filtered_sequences:
+            ed = edit_distance(seq, other_seq)
+            if ed <= max_edit_distance:
+                is_unique = False
+                break
+        if is_unique:
+            filtered_sequences.append(seq)
 
     return filtered_sequences
 
@@ -153,12 +155,12 @@ def remove_subsequences(sequences):
 # improved_ac_algorithm 결과값인 result를 사용합니다.
 frequent_sequences = [seq_info["The frequent sequence"] for seq_info in result]
 
+
 # 필터링할 때 최대 허용 편집 거리를 설정합니다.
-max_edit_distance = 50
+max_edit_distance = 5
 
 filtered_frequent_sequences = parallel_filter_sequences_by_edit_distance(frequent_sequences, max_edit_distance)
 filtered_frequent_sequences = remove_subsequences(filtered_frequent_sequences)
-
 
 filtered_result = []
 for seq_info in result:
