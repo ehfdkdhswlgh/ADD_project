@@ -1,4 +1,24 @@
 from collections import defaultdict
+import pyshark
+import Levenshtein
+
+
+packets = pyshark.FileCapture(
+    input_file='../Pcaps/ARP.pcapng',
+    use_json=True,
+    include_raw=True,
+    display_filter="eth.dst.ig == 1",  # 브로드캐스트 패킷
+)._packets_from_tshark_sync()
+hex_string_list = []
+for packet in packets:
+    hex_string = packet.frame_raw.value
+    hex_string_list.append(hex_string)
+
+print("입력 패킷의 수")
+print(len(hex_string_list))
+
+
+
 
 def bytearray_to_bin(byte_array):
     return ''.join(format(byte, '08b') for byte in byte_array)
@@ -7,8 +27,8 @@ def increment_counter(state_tree, sequence):
     state_tree[sequence] += 1
     return state_tree
 
-def improved_ac_algorithm(byte_array_list, threshold, min_len, max_len):
-    bit_stream_list = [bytearray_to_bin(byte_array) for byte_array in byte_array_list]
+def improved_ac_algorithm(hex_string_list, min_acc, max_acc, min_len, max_len):
+    bit_stream_list = [bytearray_to_bin(bytearray.fromhex(hex_string)) for hex_string in hex_string_list]
     n = len(bit_stream_list)
     state_tree = defaultdict(int)
 
@@ -22,85 +42,41 @@ def improved_ac_algorithm(byte_array_list, threshold, min_len, max_len):
             if count > 0:
                 state_tree[sequence] += 1
 
-    supp_min = {length: (n - length + 1) / (2 ** length) * threshold for length in range(min_len, max_len + 1)}
+    supp_min = {length: (n - length + 1) / (2 ** length) * min_acc for length in range(min_len, max_len + 1)}
     D = []
     seen_sequences = set()
     for sequence, count in state_tree.items():
-        if count > supp_min[len(sequence)] and (count / n) * 100 >= threshold * 100:
-            hex_sequence = f"0x{int(sequence, 2):0{len(sequence) // 4}X}"
+        freq_percentage = (count / n) * 100
+        if count > supp_min[len(sequence)] and min_acc * 100 <= freq_percentage <= max_acc * 100:
+            hex_sequence = f"{int(sequence, 2):0{len(sequence) // 4}X}"
             if hex_sequence not in seen_sequences:
                 D.append({
                     "length": len(sequence),
                     "The frequent sequence": hex_sequence,
-                    "Frequency": f"{(count / n) * 100:.1f}%",
+                    "Frequency": f"{freq_percentage:.1f}%",
                 })
                 seen_sequences.add(hex_sequence)
 
     return D
 
 
-
-
-import pyshark
-packets = pyshark.FileCapture(
-            input_file='../Pcaps/ARP.pcapng',
-            use_json=True,
-            include_raw=True,
-            display_filter="eth.dst.ig == 1", # 브로드캐스트 패킷
-          )._packets_from_tshark_sync()
-byte_array_list = []
-for packet in packets:
-    hex = packet.frame_raw.value
-    byte_array_list.append(bytearray.fromhex(hex))
-
-
-print("입력 패킷의 수")
-print(byte_array_list.__len__())
-
-
-
-
-threshold = 0.5
-#0.3 : 빈도수 30% 이상
-#0.8 : 빈도수 80% 이상,
-
 min_len = 16
 max_len = 160
+min_acc = 0.7
+max_acc = 0.75
 
-result = improved_ac_algorithm(byte_array_list, threshold, min_len, max_len)
+result = improved_ac_algorithm(hex_string_list, min_acc, max_acc, min_len, max_len)
 print("The frequent sequences set D:", len(result))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-import Levenshtein
-
 def edit_distance(x, y):
     return Levenshtein.distance(x, y)
-
-
 
 def similarity(x, y):
     ed = edit_distance(x, y)
     length = (len(x) + len(y)) / 2
     sim = (length - ed) / length
     return sim
-
-
-
-
-
-import concurrent.futures
 
 def is_unique_sequence(seq, other_sequences, max_edit_distance):
     for other_seq in other_sequences:
@@ -109,9 +85,6 @@ def is_unique_sequence(seq, other_sequences, max_edit_distance):
             if ed <= max_edit_distance:
                 return False
     return True
-
-import functools
-import bisect
 
 def parallel_filter_sequences_by_edit_distance(sequences, max_edit_distance):
     sorted_sequences = sorted(sequences, key=len)
@@ -130,7 +103,6 @@ def parallel_filter_sequences_by_edit_distance(sequences, max_edit_distance):
     return filtered_sequences
 
 
-
 def remove_subsequences(sequences):
     sequences = sorted(sequences, key=lambda x: len(x))
     filtered_sequences = []
@@ -146,15 +118,8 @@ def remove_subsequences(sequences):
 
     return filtered_sequences
 
-
-
-
-
-
-
 # improved_ac_algorithm 결과값인 result를 사용합니다.
 frequent_sequences = [seq_info["The frequent sequence"] for seq_info in result]
-
 
 # 필터링할 때 최대 허용 편집 거리를 설정합니다.
 max_edit_distance = 5
@@ -169,3 +134,34 @@ for seq_info in result:
 
 print("Filtered frequent sequences set D:", len(filtered_result))
 print("Filtered frequent sequences set D:", filtered_result)
+
+
+
+
+
+from itertools import chain, combinations
+
+def find_packets_with_sequence(hex_string_list, sequence):
+    return [packet for packet in hex_string_list if sequence in packet]
+
+def find_relationships(filtered_frequent_sequences, hex_string_list):
+    sequence_packets = {seq: find_packets_with_sequence(hex_string_list, seq) for seq in filtered_frequent_sequences}
+
+    relationships = []
+
+    for seq, packets in sequence_packets.items():
+        for other_seq, other_packets in sequence_packets.items():
+            if seq != other_seq:
+                if set(packets) <= set(other_packets):
+                    relationships.append(f"{seq} ⇒ {other_seq}")
+
+    for seq_comb in chain.from_iterable(combinations(filtered_frequent_sequences, r) for r in range(2, len(filtered_frequent_sequences) + 1)):
+        intersection = set.intersection(*(set(sequence_packets[seq]) for seq in seq_comb))
+        for seq, packets in sequence_packets.items():
+            if seq not in seq_comb and intersection <= set(packets):
+                relationships.append(f"{','.join(seq_comb)} ⇒ {seq}")
+
+    return relationships
+
+relationships = find_relationships(filtered_frequent_sequences, hex_string_list)
+print(relationships)
