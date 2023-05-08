@@ -1,6 +1,5 @@
 from collections import defaultdict
 import pyshark
-import Levenshtein
 
 packets = pyshark.FileCapture(
     input_file='../Pcaps/ARP.pcapng',
@@ -13,8 +12,7 @@ for packet in packets:
     hex_string = packet.frame_raw.value
     hex_string_list.append(hex_string)
 
-print("입력 패킷의 수")
-print(len(hex_string_list))
+print("입력 패킷의 수 : ", len(hex_string_list))
 
 def bytearray_to_bin(byte_array):
     return ''.join(format(byte, '08b') for byte in byte_array)
@@ -23,7 +21,7 @@ def increment_counter(state_tree, sequence):
     state_tree[sequence] += 1
     return state_tree
 
-def improved_ac_algorithm(hex_string_list, min_acc, max_acc, min_len, max_len):
+def find_frequent_packet_sequences(hex_string_list, min_acc, max_acc, min_len, max_len):
     bit_stream_list = [bytearray_to_bin(bytearray.fromhex(hex_string)) for hex_string in hex_string_list]
     n = len(bit_stream_list)
     state_tree = defaultdict(int)
@@ -66,69 +64,33 @@ def improved_ac_algorithm(hex_string_list, min_acc, max_acc, min_len, max_len):
 
 min_len = 16
 max_len = 160
-min_acc = 0.3
-max_acc = 0.4
+min_acc = 0.5
+max_acc = 1.0
 
-result, packet_indices_dict = improved_ac_algorithm(hex_string_list, min_acc, max_acc, min_len, max_len)
-print("The frequent sequences set D:", len(result))
-
-def edit_distance(x, y):
-    return Levenshtein.distance(x, y)
-
-def similarity(x, y):
-    ed = edit_distance(x, y)
-    length = (len(x) + len(y)) / 2
-    sim = (length - ed) / length
-    return sim
+result, packet_indices_dict = find_frequent_packet_sequences(hex_string_list, min_acc, max_acc, min_len, max_len)
+print("찾은 빈번한 시퀀스의 수 : ", len(result))
 
 
-def is_unique_sequence(seq, other_sequences, max_edit_distance):
-    for other_seq in other_sequences:
-        if seq != other_seq:
-            ed = edit_distance(seq, other_seq)
-            if ed <= max_edit_distance:
-                return False
-    return True
-
-def parallel_filter_sequences_by_edit_distance(sequences, max_edit_distance):
-    sorted_sequences = sorted(sequences, key=len)
-
-    filtered_sequences = []
-    for seq in sorted_sequences:
-        is_unique = True
-        for other_seq in filtered_sequences:
-            ed = edit_distance(seq, other_seq)
-            if ed <= max_edit_distance:
-                is_unique = False
-                break
-        if is_unique:
-            filtered_sequences.append(seq)
-
-    return filtered_sequences
-
-def remove_subsequences(sequences):
-    sequences = sorted(sequences, key=lambda x: len(x))
-    filtered_sequences = []
-
-    for seq in sequences:
-        is_subsequence = False
-        for longer_seq in filtered_sequences:
-            if seq in longer_seq:
-                is_subsequence = True
-                break
-        if not is_subsequence:
-            filtered_sequences.append(seq)
-
-    return filtered_sequences
-
-# improved_ac_algorithm 결과값인 result를 사용합니다.
 frequent_sequences = [seq_info["The frequent sequence"] for seq_info in result]
 
-# 필터링할 때 최대 허용 편집 거리를 설정합니다.
-max_edit_distance = 5
 
-filtered_frequent_sequences = parallel_filter_sequences_by_edit_distance(frequent_sequences, max_edit_distance)
-filtered_frequent_sequences = remove_subsequences(filtered_frequent_sequences)
+
+def filter_unique_sequences(sequences):
+    filtered_sequences = sequences.copy()
+
+    for seq in sequences:
+        for other_seq in sequences:
+            if seq != other_seq and seq in other_seq:
+                if other_seq in filtered_sequences:
+                    filtered_sequences.remove(other_seq)
+
+    return filtered_sequences
+
+
+
+filtered_frequent_sequences = filter_unique_sequences(frequent_sequences)
+
+
 
 filtered_result = []
 for seq_info in result:
@@ -136,9 +98,8 @@ for seq_info in result:
         seq_info["Packet Indices"] = packet_indices_dict[seq_info["The frequent sequence"]]
         filtered_result.append(seq_info)
 
-print("Filtered frequent sequences set D:", len(filtered_result))
-print("Filtered frequent sequences set D:", filtered_result)
-
+print("필터링한 빈번한 시퀀스의 수 : ", len(filtered_result))
+# print("필터링한 빈번한 시퀀스 : ", filtered_result)
 
 
 
@@ -165,4 +126,5 @@ def find_association_rules(filtered_result):
 
 
 association_rules = find_association_rules(filtered_result)
-print("Association rules:", association_rules)
+print("찾은 연관관계의 수 : ", len(association_rules))
+# print("찾은 연관관계 :", association_rules)
