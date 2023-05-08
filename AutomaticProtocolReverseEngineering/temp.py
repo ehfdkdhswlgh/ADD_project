@@ -2,7 +2,6 @@ from collections import defaultdict
 import pyshark
 import Levenshtein
 
-
 packets = pyshark.FileCapture(
     input_file='../Pcaps/ARP.pcapng',
     use_json=True,
@@ -16,9 +15,6 @@ for packet in packets:
 
 print("입력 패킷의 수")
 print(len(hex_string_list))
-
-
-
 
 def bytearray_to_bin(byte_array):
     return ''.join(format(byte, '08b') for byte in byte_array)
@@ -45,6 +41,10 @@ def improved_ac_algorithm(hex_string_list, min_acc, max_acc, min_len, max_len):
     supp_min = {length: (n - length + 1) / (2 ** length) * min_acc for length in range(min_len, max_len + 1)}
     D = []
     seen_sequences = set()
+
+    # Initialize a dictionary to store the indices of packets containing each frequent sequence
+    packet_indices_dict = defaultdict(list)
+
     for sequence, count in state_tree.items():
         freq_percentage = (count / n) * 100
         if count > supp_min[len(sequence)] and min_acc * 100 <= freq_percentage <= max_acc * 100:
@@ -57,17 +57,20 @@ def improved_ac_algorithm(hex_string_list, min_acc, max_acc, min_len, max_len):
                 })
                 seen_sequences.add(hex_sequence)
 
-    return D
+                # Find the indices of packets containing the frequent sequence
+                for i, bit_stream in enumerate(bit_stream_list):
+                    if sequence in bit_stream:
+                        packet_indices_dict[hex_sequence].append(i)
 
+    return D, packet_indices_dict
 
 min_len = 16
 max_len = 160
-min_acc = 0.9
-max_acc = 1.0
+min_acc = 0.3
+max_acc = 0.4
 
-result = improved_ac_algorithm(hex_string_list, min_acc, max_acc, min_len, max_len)
+result, packet_indices_dict = improved_ac_algorithm(hex_string_list, min_acc, max_acc, min_len, max_len)
 print("The frequent sequences set D:", len(result))
-
 
 def edit_distance(x, y):
     return Levenshtein.distance(x, y)
@@ -77,6 +80,7 @@ def similarity(x, y):
     length = (len(x) + len(y)) / 2
     sim = (length - ed) / length
     return sim
+
 
 def is_unique_sequence(seq, other_sequences, max_edit_distance):
     for other_seq in other_sequences:
@@ -101,7 +105,6 @@ def parallel_filter_sequences_by_edit_distance(sequences, max_edit_distance):
             filtered_sequences.append(seq)
 
     return filtered_sequences
-
 
 def remove_subsequences(sequences):
     sequences = sorted(sequences, key=lambda x: len(x))
@@ -130,6 +133,7 @@ filtered_frequent_sequences = remove_subsequences(filtered_frequent_sequences)
 filtered_result = []
 for seq_info in result:
     if seq_info["The frequent sequence"] in filtered_frequent_sequences:
+        seq_info["Packet Indices"] = packet_indices_dict[seq_info["The frequent sequence"]]
         filtered_result.append(seq_info)
 
 print("Filtered frequent sequences set D:", len(filtered_result))
@@ -137,31 +141,28 @@ print("Filtered frequent sequences set D:", filtered_result)
 
 
 
-from mlxtend.preprocessing import TransactionEncoder
-from mlxtend.frequent_patterns import apriori, association_rules
-import pandas as pd
 
-def find_association_rules(hex_string_list, filtered_frequent_sequences, confidence_level=1.0):
-    # Create the transactions with the filtered sequences
-    transactions = []
-    for packet in hex_string_list:
-        packet_sequences = set()
-        for seq in filtered_frequent_sequences:
-            if seq in packet:
-                packet_sequences.add(seq)
-        transactions.append(packet_sequences)
 
-    # Apply the Apriori algorithm
-    te = TransactionEncoder()
-    te_ary = te.fit(transactions).transform(transactions)
-    df = pd.DataFrame(te_ary, columns=te.columns_)
+def find_association_rules(filtered_result):
+    rules = []
+    for i, seq_info1 in enumerate(filtered_result):
+        for j, seq_info2 in enumerate(filtered_result):
+            if i != j:
+                seq1_indices = set(seq_info1["Packet Indices"])
+                seq2_indices = set(seq_info2["Packet Indices"])
 
-    frequent_itemsets = apriori(df, min_support=0.01, use_colnames=True)  # 수정된 부분
-    rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=confidence_level)
+                if seq1_indices.issubset(seq2_indices):
+                    rule = f"{seq_info1['The frequent sequence']} ⇒ {seq_info2['The frequent sequence']}"
+                    if rule not in rules:
+                        rules.append(rule)
+                elif seq2_indices.issubset(seq1_indices):
+                    rule = f"{seq_info2['The frequent sequence']} ⇒ {seq_info1['The frequent sequence']}"
+                    if rule not in rules:
+                        rules.append(rule)
 
-    return [f"{set(antecedent)} ⇒ {set(consequent)}" for antecedent, consequent in
-            zip(rules['antecedents'], rules['consequents'])]
+    return rules
 
-# Find the association rules with 100% confidence
-association_rules = find_association_rules(hex_string_list, filtered_frequent_sequences, confidence_level=1.0)
-print(association_rules)
+
+
+association_rules = find_association_rules(filtered_result)
+print("Association rules:", association_rules)
