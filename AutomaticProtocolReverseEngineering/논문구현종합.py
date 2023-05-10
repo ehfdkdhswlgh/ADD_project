@@ -5,12 +5,33 @@ from find_association_rules import *
 
 
 # Pcap 파일 읽기
+
 packets = pyshark.FileCapture(
-    input_file='../Pcaps/ARP.pcapng',
+    input_file='../Pcaps/ARP_42_217_X.pcapng',
     use_json=True,
     include_raw=True,
-    display_filter="eth.dst.ig == 1",  # 브로드캐스트 패킷
 )._packets_from_tshark_sync()
+
+# packets = pyshark.FileCapture(
+#     input_file='../Pcaps/GQUIC_Q043_1392_41_O.pcapng',
+#     use_json=True,
+#     include_raw=True,
+# )._packets_from_tshark_sync()
+
+# packets = pyshark.FileCapture(
+#     input_file='../Pcaps/TLS_85_486_O.pcapng',
+#     use_json=True,
+#     include_raw=True,
+# )._packets_from_tshark_sync()
+
+# packets = pyshark.FileCapture(
+#     input_file='../Pcaps/802_11_TCP_1562_194_O.pcapng',
+#     use_json=True,
+#     include_raw=True,
+# )._packets_from_tshark_sync()
+
+
+
 hex_string_list = []
 for packet in packets:
     hex_string = packet.frame_raw.value
@@ -21,8 +42,8 @@ print("입력 패킷의 수 : ", len(hex_string_list))
 # 빈번한 시퀀스 매개변수 설정
 min_len = 16
 max_len = 16
-min_acc = 0.5
-max_acc = 0.99
+min_acc = 0.9
+max_acc = 1.0
 
 # 빈번한 시퀀스 구하기
 result, packet_indices_dict = find_frequent_packet_sequences(hex_string_list, min_acc, max_acc, min_len, max_len)
