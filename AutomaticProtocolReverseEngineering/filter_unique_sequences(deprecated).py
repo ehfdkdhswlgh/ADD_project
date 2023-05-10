@@ -1,4 +1,7 @@
-def filter_unique_sequences(sequences):
+
+
+
+def filter_unique_sequences(sequences): # deprecated
     filtered_sequences = sequences.copy()
 
     for seq in sequences:

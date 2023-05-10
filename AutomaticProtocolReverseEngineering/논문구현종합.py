@@ -1,6 +1,5 @@
 import pyshark
 from find_frequent_packet_sequences import *
-from filter_unique_sequences import *
 from find_association_rules import *
 
 
@@ -39,29 +38,35 @@ for packet in packets:
 
 print("입력 패킷의 수 : ", len(hex_string_list))
 
-# 빈번한 시퀀스 매개변수 설정
-min_len = 16
-max_len = 16
-min_acc = 0.9
+# 빈번한 시퀀스 매개변수 설정 (길이는 비트 단위입니다)
+length = 16
+min_acc = 0.8
 max_acc = 1.0
 
 # 빈번한 시퀀스 구하기
-result, packet_indices_dict = find_frequent_packet_sequences(hex_string_list, min_acc, max_acc, min_len, max_len)
+result, packet_indices_dict = find_frequent_packet_sequences(hex_string_list, min_acc, max_acc, length)
 print("찾은 빈번한 시퀀스의 수 : ", len(result))
-frequent_sequences = [seq_info["The frequent sequence"] for seq_info in result]
 
-# 빈번한 시퀀스 중복 제거
-filtered_frequent_sequences = filter_unique_sequences(frequent_sequences)
-filtered_result = []
+# 각 시퀀스의 Packet Indices 추가
 for seq_info in result:
-    if seq_info["The frequent sequence"] in filtered_frequent_sequences:
-        seq_info["Packet Indices"] = packet_indices_dict[seq_info["The frequent sequence"]]
-        filtered_result.append(seq_info)
+    seq_info["Packet Indices"] = packet_indices_dict[seq_info["The frequent sequence"]]
 
-print("필터링한 빈번한 시퀀스의 수 : ", len(filtered_result))
-# print("필터링한 빈번한 시퀀스 : ", filtered_result)
 
 #빈번한 시퀀스 간 연관관계 구하기
-association_rules = find_association_rules(filtered_result)
+association_rules = find_association_rules(result)
 print("찾은 연관관계의 수 : ", len(association_rules))
 # print("찾은 연관관계 :", association_rules)
+
+
+# 성능 평가
+for seq in result:
+    packet_idx = seq["Packet Indices"][0]
+    position = hex_string_list[packet_idx].find(seq["The frequent sequence"].lower())
+    print(position)
+
+
+
+
+
+
+
