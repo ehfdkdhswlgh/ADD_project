@@ -40,7 +40,7 @@ print("입력 패킷의 수 : ", len(hex_string_list))
 
 # 빈번한 시퀀스 매개변수 설정 (길이는 비트 단위입니다)
 length = 16
-min_acc = 0.8
+min_acc = 0.5
 max_acc = 1.0
 
 # 빈번한 시퀀스 구하기
@@ -52,6 +52,25 @@ for seq_info in result:
     seq_info["Packet Indices"] = packet_indices_dict[seq_info["The frequent sequence"]]
 
 
+def update_result(hex_string_list, result):
+    for seq_info in result:
+        seq = seq_info["The frequent sequence"]
+        seq = seq.lower()
+        indices = []
+        count = 0
+        for i, hex_string in enumerate(hex_string_list):
+            if seq in hex_string:
+                indices.append(i)
+                count += 1
+        seq_info["Packet Indices"] = indices
+        seq_info["Frequency"] = f'{count / len(hex_string_list) * 100:.1f}%'
+
+# Update Packet Indices and Frequency in result
+update_result(hex_string_list, result)
+
+
+
+
 #빈번한 시퀀스 간 연관관계 구하기
 association_rules = find_association_rules(result)
 print("찾은 연관관계의 수 : ", len(association_rules))
@@ -59,10 +78,10 @@ print("찾은 연관관계의 수 : ", len(association_rules))
 
 
 # 성능 평가
-for seq in result:
-    packet_idx = seq["Packet Indices"][0]
-    position = hex_string_list[packet_idx].find(seq["The frequent sequence"].lower())
-    print(position)
+# for seq in result:
+#     packet_idx = seq["Packet Indices"][0]
+#     position = hex_string_list[packet_idx].find(seq["The frequent sequence"].lower())
+#     print(position)
 
 
 
