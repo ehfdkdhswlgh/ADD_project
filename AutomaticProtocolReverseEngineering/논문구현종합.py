@@ -40,7 +40,7 @@ print("입력 패킷의 수 : ", len(hex_string_list))
 
 # 빈번한 시퀀스 매개변수 설정 (길이는 비트 단위입니다)
 length = 16
-min_acc = 0.5
+min_acc = 0.8
 max_acc = 1.0
 
 # 빈번한 시퀀스 구하기
@@ -52,6 +52,7 @@ for seq_info in result:
     seq_info["Packet Indices"] = packet_indices_dict[seq_info["The frequent sequence"]]
 
 
+# 시퀀스를 합쳐서 긴 시퀀스를 만드는경우 빈도율이랑 패킷 인덱스가 갱신이 안되는 문제가 발생하기 때문에 이를 다시 갱신하는 작업 필요
 def update_result(hex_string_list, result):
     for seq_info in result:
         seq = seq_info["The frequent sequence"]
@@ -65,10 +66,9 @@ def update_result(hex_string_list, result):
         seq_info["Packet Indices"] = indices
         seq_info["Frequency"] = f'{count / len(hex_string_list) * 100:.1f}%'
 
+
 # Update Packet Indices and Frequency in result
 update_result(hex_string_list, result)
-
-
 
 
 #빈번한 시퀀스 간 연관관계 구하기
@@ -78,10 +78,11 @@ print("찾은 연관관계의 수 : ", len(association_rules))
 
 
 # 성능 평가
-# for seq in result:
-#     packet_idx = seq["Packet Indices"][0]
-#     position = hex_string_list[packet_idx].find(seq["The frequent sequence"].lower())
-#     print(position)
+for seq in result:
+    packet_idx = seq["Packet Indices"][0]
+    position = hex_string_list[packet_idx].find(seq["The frequent sequence"].lower())
+    # print(position)
+    #position이 내가 설정한 값(페이로드 시작위치)보다 작으면 true, 크면 false 로 성능 평가하기
 
 
 
