@@ -63,9 +63,9 @@ def find_frequent_packet_sequences(hex_string_list, min_acc, max_acc, min_len, m
     return D, packet_indices_dict
 
 min_len = 16
-max_len = 160
+max_len = 16
 min_acc = 0.5
-max_acc = 1.0
+max_acc = 0.99
 
 result, packet_indices_dict = find_frequent_packet_sequences(hex_string_list, min_acc, max_acc, min_len, max_len)
 print("찾은 빈번한 시퀀스의 수 : ", len(result))
