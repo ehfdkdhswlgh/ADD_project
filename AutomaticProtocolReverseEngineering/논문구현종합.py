@@ -5,29 +5,36 @@ from find_association_rules import *
 
 # Pcap 파일 읽기
 
-packets = pyshark.FileCapture(
-    input_file='../Pcaps/ARP_42_217_X.pcapng',
-    use_json=True,
-    include_raw=True,
-)._packets_from_tshark_sync()
-
 # packets = pyshark.FileCapture(
-#     input_file='../Pcaps/GQUIC_Q043_1392_41_O.pcapng',
+#     input_file='../Pcaps/ARP_42_217_X.pcapng',
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
+# payload_idx = 218 # ARP (페이로드가 없으므로 항상 100%임)
+
+
+# packets = pyshark.FileCapture(
+#     input_file='../Pcaps/GQUIC_Q043_1392_38_O.pcapng',
+#     use_json=True,
+#     include_raw=True,
+# )._packets_from_tshark_sync()
+# payload_idx = 105 #Q043
+
 
 # packets = pyshark.FileCapture(
 #     input_file='../Pcaps/TLS_85_486_O.pcapng',
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
+# payload_idx = 119 # TLS
 
-# packets = pyshark.FileCapture(
-#     input_file='../Pcaps/802_11_TCP_1562_194_O.pcapng',
-#     use_json=True,
-#     include_raw=True,
-# )._packets_from_tshark_sync()
+
+packets = pyshark.FileCapture(
+    input_file='../Pcaps/UDP_74_183_O.pcapng',
+    use_json=True,
+    include_raw=True,
+)._packets_from_tshark_sync()
+payload_idx = 85 # UDP
 
 
 
@@ -40,7 +47,7 @@ print("입력 패킷의 수 : ", len(hex_string_list))
 
 # 빈번한 시퀀스 매개변수 설정 (길이는 비트 단위입니다)
 length = 16
-min_acc = 0.8
+min_acc = 0.3
 max_acc = 1.0
 
 # 빈번한 시퀀스 구하기
@@ -77,14 +84,20 @@ print("찾은 연관관계의 수 : ", len(association_rules))
 # print("찾은 연관관계 :", association_rules)
 
 
-# 성능 평가
+# 빈번한 시퀀스 성능 평가
+true_count = 0
+total_count = 0
+
 for seq in result:
     packet_idx = seq["Packet Indices"][0]
     position = hex_string_list[packet_idx].find(seq["The frequent sequence"].lower())
-    # print(position)
-    #position이 내가 설정한 값(페이로드 시작위치)보다 작으면 true, 크면 false 로 성능 평가하기
 
+    if position <= payload_idx:
+        true_count += 1
+    total_count += 1
 
+true_ratio = (true_count / total_count) * 100
+print(f"빈번한 시퀀스 정확도 : {true_ratio}%")
 
 
 
