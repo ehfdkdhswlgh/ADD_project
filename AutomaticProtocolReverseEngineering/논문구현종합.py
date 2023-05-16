@@ -1,16 +1,17 @@
 import pyshark
 from find_frequent_packet_sequences import *
-from find_association_rules import *
+from draw_graph import *
 
 
 # Pcap 파일 읽기
 
-# packets = pyshark.FileCapture(
-#     input_file='../Pcaps/ARP_42_217_X.pcapng',
-#     use_json=True,
-#     include_raw=True,
-# )._packets_from_tshark_sync()
-# payload_idx = 218 # ARP (페이로드가 없으므로 항상 100%임)
+packets = pyshark.FileCapture(
+    input_file='../Pcaps/ARP_42_217_X.pcapng',
+    use_json=True,
+    include_raw=True,
+)._packets_from_tshark_sync()
+payload_idx = 218 # ARP (페이로드가 없으므로 항상 100%임)
+protocol_name = "ARP Protocol"
 
 
 # packets = pyshark.FileCapture(
@@ -18,7 +19,8 @@ from find_association_rules import *
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
-# payload_idx = 105 #Q043
+# payload_idx = 105 # Q043
+# protocol_name = "GQUIC-Q043 Protocol"
 
 
 # packets = pyshark.FileCapture(
@@ -27,15 +29,16 @@ from find_association_rules import *
 #     include_raw=True,
 # )._packets_from_tshark_sync()
 # payload_idx = 119 # TLS
+# protocol_name = "TLS Protocol"
 
 
-packets = pyshark.FileCapture(
-    input_file='../Pcaps/UDP_74_183_O.pcapng',
-    use_json=True,
-    include_raw=True,
-)._packets_from_tshark_sync()
-payload_idx = 85 # UDP
-
+# packets = pyshark.FileCapture(
+#     input_file='../Pcaps/UDP_74_183_O.pcapng',
+#     use_json=True,
+#     include_raw=True,
+# )._packets_from_tshark_sync()
+# payload_idx = 85 # UDP
+# protocol_name = "UDP Protocol"
 
 
 hex_string_list = []
@@ -44,10 +47,11 @@ for packet in packets:
     hex_string_list.append(hex_string)
 
 print("입력 패킷의 수 : ", len(hex_string_list))
+print("입력 패킷의 길이 : ", len(hex_string_list[0]))
 
 # 빈번한 시퀀스 매개변수 설정 (길이는 비트 단위입니다)
 length = 16
-min_acc = 0.3
+min_acc = 0.6
 max_acc = 1.0
 
 # 빈번한 시퀀스 구하기
@@ -73,14 +77,23 @@ def update_result(hex_string_list, result):
         seq_info["Packet Indices"] = indices
         seq_info["Frequency"] = f'{count / len(hex_string_list) * 100:.1f}%'
 
+        # Find the starting index of "The frequent sequence" in the first packet
+        first_index = indices[0]
+        first_hex_string = hex_string_list[first_index]
+        start_at = first_hex_string.find(seq)
+
+        # Add the starting index to the seq_info dictionary
+        seq_info["startAt"] = start_at
+
+
 
 # Update Packet Indices and Frequency in result
 update_result(hex_string_list, result)
 
 
 #빈번한 시퀀스 간 연관관계 구하기
-association_rules = find_association_rules(result)
-print("찾은 연관관계의 수 : ", len(association_rules))
+# association_rules = find_association_rules(result)
+# print("찾은 연관관계의 수 : ", len(association_rules))
 # print("찾은 연관관계 :", association_rules)
 
 
@@ -101,5 +114,8 @@ print(f"빈번한 시퀀스 정확도 : {true_ratio}%")
 
 
 
+# 빈번한 시퀀스 그래프 출력
+draw_graph(hex_string_list, result, protocol_name)
 
+print("")
 
