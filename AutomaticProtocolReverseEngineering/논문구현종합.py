@@ -5,13 +5,12 @@ from draw_graph import *
 
 # Pcap 파일 읽기
 
-packets = pyshark.FileCapture(
-    input_file='../Pcaps/ARP_42_217_X.pcapng',
-    use_json=True,
-    include_raw=True,
-)._packets_from_tshark_sync()
-payload_idx = 218 # ARP (페이로드가 없으므로 항상 100%임)
-protocol_name = "ARP Protocol"
+# packets = pyshark.FileCapture(
+#     input_file='../Pcaps/ARP_42_217_X.pcapng',
+#     use_json=True,
+#     include_raw=True,
+# )._packets_from_tshark_sync()
+# protocol_name = "ARP Protocol"
 
 
 # packets = pyshark.FileCapture(
@@ -19,17 +18,15 @@ protocol_name = "ARP Protocol"
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
-# payload_idx = 105 # Q043
 # protocol_name = "GQUIC-Q043 Protocol"
 
 
-# packets = pyshark.FileCapture(
-#     input_file='../Pcaps/TLS_85_486_O.pcapng',
-#     use_json=True,
-#     include_raw=True,
-# )._packets_from_tshark_sync()
-# payload_idx = 119 # TLS
-# protocol_name = "TLS Protocol"
+packets = pyshark.FileCapture(
+    input_file='../Pcaps/TLS_85_486_O.pcapng',
+    use_json=True,
+    include_raw=True,
+)._packets_from_tshark_sync()
+protocol_name = "TLS Protocol"
 
 
 # packets = pyshark.FileCapture(
@@ -37,7 +34,6 @@ protocol_name = "ARP Protocol"
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
-# payload_idx = 85 # UDP
 # protocol_name = "UDP Protocol"
 
 
@@ -89,29 +85,6 @@ def update_result(hex_string_list, result):
 
 # Update Packet Indices and Frequency in result
 update_result(hex_string_list, result)
-
-
-#빈번한 시퀀스 간 연관관계 구하기
-# association_rules = find_association_rules(result)
-# print("찾은 연관관계의 수 : ", len(association_rules))
-# print("찾은 연관관계 :", association_rules)
-
-
-# 빈번한 시퀀스 성능 평가
-true_count = 0
-total_count = 0
-
-for seq in result:
-    packet_idx = seq["Packet Indices"][0]
-    position = hex_string_list[packet_idx].find(seq["The frequent sequence"].lower())
-
-    if position <= payload_idx:
-        true_count += 1
-    total_count += 1
-
-true_ratio = (true_count / total_count) * 100
-print(f"빈번한 시퀀스 정확도 : {true_ratio}%")
-
 
 
 # 빈번한 시퀀스 그래프 출력
