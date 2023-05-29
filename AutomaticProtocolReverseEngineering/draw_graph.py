@@ -1,9 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.cm as cm
-
-import matplotlib.pyplot as plt
-import numpy as np
 import matplotlib.colors as mcolors
 import random
 
@@ -16,8 +12,8 @@ def draw_graph(hex_string_list, result, protocol_name):
     # 그래프를 흰색으로 초기화
     graph = np.ones((height, width, 3))
 
-    # 모든 가능한 색상을 가져와서 랜덤하게 섞기
-    all_colors = list(mcolors.CSS4_COLORS.keys())
+    # 모든 가능한 색상을 가져와서 랜덤하게 섞기. 'white'는 제외
+    all_colors = [color for color in mcolors.CSS4_COLORS.keys() if color != 'white']
     random.shuffle(all_colors)
 
     # 빈번한 시퀀스를 그래프에 색칠하기
