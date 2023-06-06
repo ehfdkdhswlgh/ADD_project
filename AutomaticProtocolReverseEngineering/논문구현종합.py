@@ -5,12 +5,12 @@ from draw_graph import *
 
 # Pcap 파일 읽기
 
-# packets = pyshark.FileCapture(
-#     input_file='../Pcaps/ARP_42_217_X.pcapng',
-#     use_json=True,
-#     include_raw=True,
-# )._packets_from_tshark_sync()
-# protocol_name = "ARP Protocol"
+packets = pyshark.FileCapture(
+    input_file='../Pcaps/ARP_42_217_X.pcapng',
+    use_json=True,
+    include_raw=True,
+)._packets_from_tshark_sync()
+protocol_name = "ARP Protocol"
 
 
 # packets = pyshark.FileCapture(
@@ -21,12 +21,12 @@ from draw_graph import *
 # protocol_name = "GQUIC-Q043 Protocol"
 
 
-packets = pyshark.FileCapture(
-    input_file='../Pcaps/TLS_85_486_O.pcapng',
-    use_json=True,
-    include_raw=True,
-)._packets_from_tshark_sync()
-protocol_name = "TLS Protocol"
+# packets = pyshark.FileCapture(
+#     input_file='../Pcaps/TLS_85_486_O.pcapng',
+#     use_json=True,
+#     include_raw=True,
+# )._packets_from_tshark_sync()
+# protocol_name = "TLS Protocol"
 
 
 # packets = pyshark.FileCapture(
@@ -85,6 +85,10 @@ def update_result(hex_string_list, result):
 
 # Update Packet Indices and Frequency in result
 update_result(hex_string_list, result)
+
+
+for i in result:
+    print(i)
 
 
 # 빈번한 시퀀스 그래프 출력
