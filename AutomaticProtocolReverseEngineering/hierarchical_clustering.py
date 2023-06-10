@@ -4,49 +4,104 @@ hex_string_list = []
 answer = []
 
 # Pcap 파일 읽기
-packets1 = pyshark.FileCapture(
+capture1 = pyshark.FileCapture(
     input_file='../Pcaps/ARP_42_217_X.pcapng',
     use_json=True,
     include_raw=True,
-)._packets_from_tshark_sync()
+)
+packets1 = capture1._packets_from_tshark_sync()
 
 for packet in packets1:
     hex_string = packet.frame_raw.value
     hex_string_list.append(hex_string)
-    answer.append(0)
+    answer.append(4)
 
-packets2 = pyshark.FileCapture(
-    input_file='../Pcaps/GQUIC_Q043_1392_41_O.pcapng',
+capture1.close()
+
+
+
+
+
+capture2 = pyshark.FileCapture(
+    input_file='../Pcaps/TLS_85_486_O.pcapng',
     use_json=True,
     include_raw=True,
-)._packets_from_tshark_sync()
+)
+
+packets2 = capture2._packets_from_tshark_sync()
 
 for packet in packets2:
     hex_string = packet.frame_raw.value
     hex_string_list.append(hex_string)
-    answer.append(3)
+    answer.append(0)
 
-packets3 = pyshark.FileCapture(
-    input_file='../Pcaps/TLS_85_486_O.pcapng',
+capture2.close()
+
+
+
+
+
+
+
+
+capture3 = pyshark.FileCapture(
+    input_file='../Pcaps/ANCP_88_24.pcapng',
     use_json=True,
     include_raw=True,
-)._packets_from_tshark_sync()
+)
+
+packets3 = capture3._packets_from_tshark_sync()
 
 for packet in packets3:
     hex_string = packet.frame_raw.value
     hex_string_list.append(hex_string)
     answer.append(2)
 
-packets4 = pyshark.FileCapture(
-    input_file='../Pcaps/802_11_TCP_1562_194_O.pcapng',
+
+capture3.close()
+
+
+
+
+
+
+capture4 = pyshark.FileCapture(
+    input_file='../Pcaps/BGP_85_60.pcapng',
     use_json=True,
     include_raw=True,
-)._packets_from_tshark_sync()
+)
+
+packets4 = capture4._packets_from_tshark_sync()
 
 for packet in packets4:
     hex_string = packet.frame_raw.value
     hex_string_list.append(hex_string)
+    answer.append(3)
+
+
+capture4.close()
+
+
+
+
+
+
+
+capture5 = pyshark.FileCapture(
+    input_file='../Pcaps/MANOLITOProtocol(SearchQuery)_81_605.pcapng',
+    use_json=True,
+    include_raw=True,
+)
+
+packets5 = capture5._packets_from_tshark_sync()
+
+
+for packet in packets5:
+    hex_string = packet.frame_raw.value
+    hex_string_list.append(hex_string)
     answer.append(1)
+
+capture5.close()
 
 
 
@@ -112,11 +167,14 @@ import numpy as np
 X = np.array(result_list)
 
 # 계층적 군집화 수행
-clustering = AgglomerativeClustering(n_clusters=4).fit(X)
+clustering = AgglomerativeClustering(n_clusters=5).fit(X)
 
 # 클러스터 라벨 출력
 cluster_labels = clustering.labels_
 print(cluster_labels)
+
+for i in cluster_labels:
+    print(i)
 
 
 

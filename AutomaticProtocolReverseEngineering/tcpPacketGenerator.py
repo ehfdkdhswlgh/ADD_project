@@ -26,7 +26,7 @@ for i in range(200):  # 200개 패킷 생성
 
 
     # 확률에 따른 MAC 주소 선택
-    addr1 = random.choices(["ac:14:20:4f:31:29", "ff:43:10:44:fa:29"], weights=[0.7, 0.3], k=1)[0]
+    addr1 = random.choices(["ac:14:20:4f:31:6a", "ff:43:10:44:fa:29"], weights=[0.7, 0.3], k=1)[0]
     addr2 = random.choices(["4d:2e:aa:23:05:ff", "15:22:50:b2:cc:ab"], weights=[0.3, 0.7], k=1)[0]
     addr3 = random.choices(["f2:33:62:ab:bc:3d", "50:34:ad:22:ad:cf"], weights=[0.7, 0.3], k=1)[0]
 
@@ -72,10 +72,11 @@ for i in range(200):  # 200개 패킷 생성
 
     flags = random.choices(['A', 'S'], weights=[0.7, 0.3], k=1)[0]
     window = random.choices([6412, 16123], weights=[0.3, 0.7], k=1)[0]
-
+    sport = random.choices([80, 4000], weights=[0.7, 0.3], k=1)[0]
+    dport = random.choices([7700, 2538], weights=[0.3, 0.7], k=1)[0]
 
     # TCP 헤더 생성
-    tcp = TCP(sport=12345, dport=80, seq=1000, ack=1000,
+    tcp = TCP(sport=sport, dport=dport, seq=randint(1, 65535), ack=randint(1, 65535),
               dataofs=5, reserved=0, flags=flags, window=window,
               urgptr=0, options=[])
 
