@@ -1,52 +1,53 @@
 import pyshark
 from find_frequent_packet_sequences import *
 from draw_graph import *
+import math
 
-packets = pyshark.FileCapture(
-    input_file='../Pcaps/ARP_42_217_X.pcapng',
-    use_json=True,
-    include_raw=True,
-)._packets_from_tshark_sync()
-protocol_name = "ARP Protocol"
-
+# packets = pyshark.FileCapture(
+#     input_file='../Pcaps/ARP_42_217_X.pcapng',
+#     use_json=True,
+#     include_raw=True,
+# )._packets_from_tshark_sync()
+# protocol_name = "ARP Protocol"
+#
 # packets = pyshark.FileCapture(
 #     input_file='../Pcaps/TLS_85_486_O.pcapng',
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
 # protocol_name = "TLS Protocol"
-
-
+#
+#
 # packets = pyshark.FileCapture(
 #     input_file='../Pcaps/ANCP_88_24.pcapng',
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
 # protocol_name = "ANCP Protocol"
-
-
+#
+#
 # packets = pyshark.FileCapture(
 #     input_file='../Pcaps/BGP_85_60.pcapng',
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
 # protocol_name = "BGP Protocol"
-
-
+#
+#
 # packets = pyshark.FileCapture(
 #     input_file='../Pcaps/SMB_88_24.pcapng',
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
 # protocol_name = "SMB Protocol"
-
+#
 # packets = pyshark.FileCapture(
 #     input_file='../Pcaps/MANOLITOProtocol(SearchQuery)_81_605.pcapng',
 #     use_json=True,
 #     include_raw=True,
 # )._packets_from_tshark_sync()
 # protocol_name = "MANOLITO Protocol(SearchQuery)"
-
+#
 # packets = pyshark.FileCapture(
 #     input_file='../Pcaps/MANOLITOProtocol(Ping)_61_144.pcapng',
 #     use_json=True,
@@ -54,22 +55,44 @@ protocol_name = "ARP Protocol"
 # )._packets_from_tshark_sync()
 # protocol_name = "MANOLITO Protocol(Ping)"
 
-
-
-
-
-
-
-
-
-
+packets = pyshark.FileCapture(
+    input_file='./tcppackets.pcap',
+    use_json=True,
+    include_raw=True,
+)._packets_from_tshark_sync()
+protocol_name = "TCP Protocol"
 
 
 
 hex_string_list = []
-for packet in packets:
+for index, packet in enumerate(packets): # 속도가 너무 느려 100개만 사용
+    # if index >= 100:
+    #     break
     hex_string = packet.frame_raw.value
     hex_string_list.append(hex_string)
+
+
+
+# hex_string_list에서 10%의 위치를 계산합니다.
+split_index = math.ceil(len(hex_string_list) * 0.1)
+
+# 리스트를 두 부분으로 분리합니다.
+tmp_hex_string_list = hex_string_list[:split_index] # 총 데이터셋의 10% 저장
+hex_string_list = hex_string_list[split_index:] # 총 데이터셋의 90% 저장
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -157,11 +180,9 @@ def increment_counter(state_tree, sequence):
     state_tree[sequence] += 1
     return state_tree
 
-print("입력 패킷의 수 : ", len(hex_string_list))
-print("입력 패킷의 길이 : ", len(hex_string_list[0]))
+print("입력 프레임의 수 : ", len(hex_string_list))
+print("입력 프레임의 길이 : ", len(hex_string_list[0]))
 
-min_acc = 0.3
-max_acc = 1.0
 
 def find_all_frequent_packet_sequences(hex_string_list, min_acc, max_acc, lengths):
     all_results = []
@@ -173,9 +194,6 @@ def find_all_frequent_packet_sequences(hex_string_list, min_acc, max_acc, length
 
     return all_results, all_packet_indices_dict
 
-
-lengths = [16,20,24,28,32,36,40,44,48,52,56,60]  # 최소길이 ~ 최대길이
-result, packet_indices_dict = find_all_frequent_packet_sequences(hex_string_list, min_acc, max_acc, lengths)
 
 
 def update_result(hex_string_list, result):
@@ -198,8 +216,6 @@ def update_result(hex_string_list, result):
 
         # Add the starting index to the seq_info dictionary
         seq_info["startAt"] = start_at
-
-update_result(hex_string_list, result)
 
 
 def filter_sequences(result):
@@ -257,11 +273,56 @@ def filter_subset_sequences(result):
 
 
 
-#빈도율 30%으로 실행
 
 
 
-#빈도율 60%으로 실행
+
+#빈도율 30%으로 실행  (페이로드 구분용!!)
+
+# 인조 TCP 같은경우 실제로 173위치부터 페이로드 시작함 (주의 : 패킷 제네레이터 돌릴때마다 값이 달라질 수 있음!!)
+tmp_min_acc = 0.3
+tmp_max_acc = 1.0
+
+tmp_lengths = [16,20,24,28,32,36,40,44,48,52,56,60]  # 최소길이 ~ 최대길이
+tmp_result, tmp_packet_indices_dict = find_all_frequent_packet_sequences(tmp_hex_string_list, tmp_min_acc, tmp_max_acc, tmp_lengths)
+update_result(tmp_hex_string_list, tmp_result)
+
+tmp_filtered_result = filter_sequences(tmp_result)
+tmp_filtered_result = filter_same_suffix_and_frequency(tmp_filtered_result)
+tmp_filtered_result = filter_subset_sequences(tmp_filtered_result)
+
+
+payload_startAt = 0
+
+for i in tmp_filtered_result:
+    if(i["startAt"] + (i["length"] / 4) > payload_startAt):
+        payload_startAt = i["startAt"] + (i["length"] / 4)
+
+payload_startAt = int(payload_startAt)
+
+if payload_startAt % 2 == 0:
+    payload_startAt = payload_startAt + 1
+
+print("페이로드 시작점 : ", payload_startAt)
+
+
+hex_string_list = [s[:payload_startAt - 1] for s in hex_string_list]
+
+
+
+
+
+
+
+#페이로드 제거한 영역으로 실행
+
+min_acc = 0.5
+max_acc = 1.0
+
+lengths = [8,12,16,20,24,28,32,36,40,44,48]  # 최소길이 ~ 최대길이
+result, packet_indices_dict = find_all_frequent_packet_sequences(hex_string_list, min_acc, max_acc, lengths)
+update_result(hex_string_list, result)
+
 min_acc2 = 0.6
 max_acc2 = 1.0
 result2, packet_indices_dict2 = find_all_frequent_packet_sequences(hex_string_list, min_acc2, max_acc2, lengths)
