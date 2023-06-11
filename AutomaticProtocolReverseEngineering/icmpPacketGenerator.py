@@ -10,7 +10,7 @@ for i in range(200):  # 200개 패킷 생성
 
 
     dst = random.choices(["00:13:46:0b:22:ba", "3d:10:ce:8b:6e:40"], weights=[0.7, 0.3], k=1)[0]
-    src = random.choices(["40:16:ce:6e:8b:24", "13:2d:4f:44:9a:14"], weights=[0.3, 0.7], k=1)[0]
+    src = random.choices(["40:16:ce:6e:8b:24", "13:2d:4f:44:9a:1f"], weights=[0.3, 0.7], k=1)[0]
 
     # 이더넷 헤더 생성
     ether = Ether(
@@ -22,7 +22,7 @@ for i in range(200):  # 200개 패킷 생성
 
     src = random.choices(["192.168.0.114", "72.14.207.99"], weights=[0.7, 0.3], k=1)[0]
     dst = random.choices(["63.220.201.91", "24.119.29.190"], weights=[0.3, 0.7], k=1)[0]
-    ttl = random.choices([128, 48], weights=[0.7, 0.3], k=1)[0]
+    ttl = random.choices([250, 72], weights=[0.8, 0.2], k=1)[0]
 
     # IP 헤더 생성
     ip = IP(
@@ -37,8 +37,8 @@ for i in range(200):  # 200개 패킷 생성
         dst=dst  # 목적지 IP 주소
     )
 
-    type = random.choices([8, 0], weights=[0.71, 0.29], k=1)[0]
-    id = random.choices([768, 59240], weights=[0.29, 0.71], k=1)[0]
+    type = random.choices([8, 0], weights=[0.75, 0.25], k=1)[0]
+    id = random.choices([768, 59240], weights=[0.28, 0.72], k=1)[0]
 
     # ICMP 패킷 생성
     icmp = ICMP(
