@@ -72,7 +72,7 @@ for i in range(200):  # 200개 패킷 생성
 
     flags = random.choices(['A', 'S'], weights=[0.7, 0.3], k=1)[0]
     window = random.choices([6412, 16123], weights=[0.3, 0.7], k=1)[0]
-    sport = random.choices([80, 4000], weights=[0.7, 0.3], k=1)[0]
+    sport = random.choices([8888, 4444], weights=[0.7, 0.3], k=1)[0]
     dport = random.choices([7700, 2538], weights=[0.3, 0.7], k=1)[0]
 
     # TCP 헤더 생성

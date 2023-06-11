@@ -7,7 +7,7 @@ packets = []  # 패킷을 저장할 리스트 생성
 for i in range(200):  # 200개 패킷 생성
 
     dst = random.choices(["ff:ff:ff:ff:ff:ff", "ff:43:10:44:fa:29"], weights=[0.7, 0.3], k=1)[0]
-    src = random.choices(["1d:5d:25:92:3f:31", "16:22:3f:4d:9a:34"], weights=[0.3, 0.7], k=1)[0]
+    src = random.choices(["1d:5d:25:92:3f:31", "d6:22:3f:4d:9a:34"], weights=[0.3, 0.7], k=1)[0]
     # 이더넷 헤더 생성
     ether = Ether(
         dst=dst,  # 목적지 MAC 주소
@@ -16,7 +16,7 @@ for i in range(200):  # 200개 패킷 생성
 
     op = random.choices([1, 2], weights=[0.7, 0.3], k=1)[0]
     hwsrc = random.choices(["54:3f:2d:39:1a:2d", "34:5f:3d:aa:9a:34"], weights=[0.3, 0.7], k=1)[0]  # 's'를 'd'로 수정
-    psrc = random.choices(["120.50.19.41", "112.192.60.96"], weights=[0.7, 0.3], k=1)[0]
+    psrc = random.choices(["21.50.19.41", "112.192.60.96"], weights=[0.7, 0.3], k=1)[0]
     hwdst = random.choices(["7f:2a:34:9f:11:55", "22:22:22:4d:9a:34"], weights=[0.3, 0.7], k=1)[0]
     pdst = random.choices(["56.30.168.22", "118.70.192.38"], weights=[0.7, 0.3], k=1)[0]
 
