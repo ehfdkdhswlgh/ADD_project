@@ -5,7 +5,7 @@ answer = []
 
 # Pcap 파일 읽기
 capture1 = pyshark.FileCapture(
-    input_file='../Pcaps/ARP_42_217_X.pcapng',
+    input_file='./tcppackets.pcap',
     use_json=True,
     include_raw=True,
 )
@@ -14,16 +14,13 @@ packets1 = capture1._packets_from_tshark_sync()
 for packet in packets1:
     hex_string = packet.frame_raw.value
     hex_string_list.append(hex_string)
-    answer.append(4)
+    answer.append(1)
 
 capture1.close()
 
 
-
-
-
 capture2 = pyshark.FileCapture(
-    input_file='../Pcaps/TLS_85_486_O.pcapng',
+    input_file='./icmppackets.pcap',
     use_json=True,
     include_raw=True,
 )
@@ -33,19 +30,13 @@ packets2 = capture2._packets_from_tshark_sync()
 for packet in packets2:
     hex_string = packet.frame_raw.value
     hex_string_list.append(hex_string)
-    answer.append(0)
+    answer.append(2)
 
 capture2.close()
 
 
-
-
-
-
-
-
 capture3 = pyshark.FileCapture(
-    input_file='../Pcaps/ANCP_88_24.pcapng',
+    input_file='./arppackets.pcap',
     use_json=True,
     include_raw=True,
 )
@@ -55,63 +46,21 @@ packets3 = capture3._packets_from_tshark_sync()
 for packet in packets3:
     hex_string = packet.frame_raw.value
     hex_string_list.append(hex_string)
-    answer.append(2)
+    answer.append(0)
 
 
 capture3.close()
 
 
 
-
-
-
-capture4 = pyshark.FileCapture(
-    input_file='../Pcaps/BGP_85_60.pcapng',
-    use_json=True,
-    include_raw=True,
-)
-
-packets4 = capture4._packets_from_tshark_sync()
-
-for packet in packets4:
-    hex_string = packet.frame_raw.value
-    hex_string_list.append(hex_string)
-    answer.append(3)
-
-
-capture4.close()
-
-
-
-
-
-
-
-capture5 = pyshark.FileCapture(
-    input_file='../Pcaps/MANOLITOProtocol(SearchQuery)_81_605.pcapng',
-    use_json=True,
-    include_raw=True,
-)
-
-packets5 = capture5._packets_from_tshark_sync()
-
-
-for packet in packets5:
-    hex_string = packet.frame_raw.value
-    hex_string_list.append(hex_string)
-    answer.append(1)
-
-capture5.close()
-
-
-
-
-
-
+import random
+random.seed(123)
+random.shuffle(hex_string_list)
+random.seed(123)
+random.shuffle(answer)
 
 
 result_list = []
-#입력 데이터 2개씩 짤라서 다시 저장하기
 
 # 입력 문자열 배열에서 각 문자열마다 2자리씩 나누기
 for input_string in hex_string_list:
@@ -159,6 +108,48 @@ result_list = adjust_array_lengths(result_list, avg_len)
 
 
 
+
+
+
+# 최적의 군집의 수 선택
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import AgglomerativeClustering
+import pandas as pd
+
+linkages = ['single', 'average', 'complete']
+k_range = range(2, 11)
+k_silhouette_df = pd.DataFrame(k_range, columns=['k'])
+
+for connect in linkages:
+    k_silhouette = []
+    print(connect)
+
+    for k in k_range:
+        clustering = AgglomerativeClustering(n_clusters=k, linkage=connect)
+        clusters = clustering.fit_predict(result_list)
+        score = silhouette_score(result_list, clusters)
+
+        print('k :', k, 'score :', score)
+        result = [score]
+        k_silhouette.append(result)
+
+score_df = pd.DataFrame(k_silhouette, columns=[connect + '_score'])
+k_silhouette_df = pd.concat([k_silhouette_df, score_df], axis=1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #계층적 군집화 수행
 from sklearn.cluster import AgglomerativeClustering
 import numpy as np
@@ -167,16 +158,11 @@ import numpy as np
 X = np.array(result_list)
 
 # 계층적 군집화 수행
-clustering = AgglomerativeClustering(n_clusters=5).fit(X)
+clustering = AgglomerativeClustering(n_clusters=3).fit(X)
 
 # 클러스터 라벨 출력
 cluster_labels = clustering.labels_
 print(cluster_labels)
-
-for i in cluster_labels:
-    print(i)
-
-
 
 
 import numpy as np
@@ -215,6 +201,8 @@ def calculate_match_percentage(answer, cluster_labels):
     return match_percentage
 
 match_percentage = calculate_match_percentage(answer, cluster_labels)
-print(match_percentage)
 
+print("ARP (0) Accuracy : ", match_percentage[0])
+print("TCP (1) Accuracy : ", match_percentage[1])
+print("ICMP (2) Accuracy : ", match_percentage[2])
 

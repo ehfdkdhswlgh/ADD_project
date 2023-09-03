@@ -1,51 +1,109 @@
-import pyshark
-import math
+from collections import defaultdict
+import matplotlib.ticker as ticker
 import numpy as np
 from matplotlib import colors as mcolors
 import matplotlib.pyplot as plt
 import random
+import math
+
+# 사용자 설정 매개 변수
+payload_min_acc = 0.33
+payload_max_acc = 1.0
+payload_lengths = [16,20,24,28,32,36,40,44,48,52,56,60]  # 최소길이 ~ 최대길이
+
+min_acc = 0.5
+max_acc = 1.0
+min_acc2 = 0.6
+max_acc2 = 1.0
+lengths = [8,12,16,20,24,28,32,36,40,44,48]
 
 
-packets = pyshark.FileCapture(
-    input_file='./tcppackets.pcap',
-    use_json=True,
-    include_raw=True,
-)._packets_from_tshark_sync()
-protocol_name = "TCP"
+def find_frequent_sequence_algorithm(hex_string_list):
+    result, packet_indices_dict = find_all_frequent_packet_sequences(hex_string_list, min_acc, max_acc, lengths)
+    update_result(hex_string_list, result)
+    result2, packet_indices_dict2 = find_all_frequent_packet_sequences(hex_string_list, min_acc2, max_acc2, lengths)
+    update_result(hex_string_list, result2)
 
-# packets = pyshark.FileCapture(
-#     input_file='./icmppackets.pcap',
-#     use_json=True,
-#     include_raw=True,
-# )._packets_from_tshark_sync()
-# protocol_name = "ICMP"
+    sum_result = result2 + result
 
-# packets = pyshark.FileCapture(
-#     input_file='./arppackets.pcap',
-#     use_json=True,
-#     include_raw=True,
-# )._packets_from_tshark_sync()
-# protocol_name = "ARP"
+    filtered_result = sum_result;
+    filtered_result = filter_sequences(sum_result)
+    filtered_result = filter_same_suffix_and_frequency(filtered_result)
+    filtered_result = filter_subset_sequences(filtered_result)
+
+    filtered_result.sort(key=lambda x: (x['startAt'], -float(x['Frequency'][:-1])))
+
+    # Group data based on length and frequency
+    groups = {}
+    for item in filtered_result:
+        key = (item['length'], item['Frequency'])
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(item)
+
+    # Process groups according to your criteria
+    result = []
+    for key, group in groups.items():
+        if group[0]['Frequency'] == '100.0%':
+            group.sort(key=lambda x: x['startAt'])
+            sequence = group[0]['The frequent sequence']
+            for i in range(1, len(group)):
+                if group[i]['startAt'] == group[i - 1]['startAt'] + 1:
+                    sequence += group[i]['The frequent sequence'][-1]
+            result.append({
+                'length': len(sequence) * 4,
+                'The frequent sequence': sequence,
+                'Frequency': group[0]['Frequency'],
+                'startAt': group[0]['startAt'],
+                'Packet Indices': group[0]['Packet Indices'],
+            })
+        else:
+            result.append(min(group, key=lambda x: x['startAt']))
+
+    for i in result:
+        print(i["The frequent sequence"] + ", Frequency : " + i["Frequency"] + ", startAt : " + str(i["startAt"]))
+
+    draw_graph(hex_string_list, result)
+
+
+def identify_payload_area(hex_string_list_10, hex_string_list):
+    payload_result, payload_packet_indices_dict = find_all_frequent_packet_sequences_for_payload(hex_string_list_10, payload_min_acc, payload_max_acc, payload_lengths)
+    update_result(hex_string_list_10, payload_result)
+
+    payload_filtered_result = filter_sequences(payload_result)
+    payload_filtered_result = filter_same_suffix_and_frequency(payload_filtered_result)
+    payload_filtered_result = filter_subset_sequences(payload_filtered_result)
+
+    payload_startAt = 0
+
+    for i in payload_filtered_result:
+        if (i["startAt"] + (i["length"] / 4) > payload_startAt):
+            payload_startAt = i["startAt"] + (i["length"] / 4)
+
+    payload_startAt = int(payload_startAt)
+
+    # draw_graph(hex_string_list[:20], payload_filtered_result)
+
+    if payload_startAt % 2 == 0:
+        payload_startAt = payload_startAt + 1
+
+    if (payload_startAt >= len(hex_string_list[0])):
+        print("\n<< 페이로드 영역이 없는 것으로 추정됨 >>\n")
+    else:
+        print("\n<< 페이로드 추정 시작점 : ", payload_startAt, " >>\n")
+        hex_string_list = [s[:payload_startAt + 1] for s in hex_string_list]
+
+
+    return payload_startAt, hex_string_list
 
 
 
-hex_string_list = []
-for index, packet in enumerate(packets): # 속도가 너무 느려 100개만 사용
-    hex_string = packet.frame_raw.value
-    hex_string_list.append(hex_string)
+def split_frames(hex_string_list):
+    split_index = math.ceil(len(hex_string_list) * 0.1)
 
+    hex_string_list_10 = hex_string_list[:split_index]
 
-
-# hex_string_list에서 10%의 위치를 계산합니다.
-split_index = math.ceil(len(hex_string_list) * 0.1)
-
-# 리스트를 두 부분으로 분리합니다.
-tmp_hex_string_list = hex_string_list[:split_index] # 총 데이터셋의 10% 저장
-# hex_string_list = hex_string_list[split_index:] # 총 데이터셋의 90% 저장
-
-
-
-from collections import defaultdict
+    return hex_string_list_10
 
 
 def find_frequent_packet_sequences_for_payload(hex_string_list, min_acc, max_acc, length):
@@ -186,9 +244,6 @@ def increment_counter(state_tree, sequence):
     state_tree[sequence] += 1
     return state_tree
 
-print("입력 프레임의 수 : ", len(hex_string_list))
-print("입력 프레임의 길이 : ", len(hex_string_list[0]))
-
 
 def find_all_frequent_packet_sequences_for_payload(hex_string_list, min_acc, max_acc, lengths):
     all_results = []
@@ -210,7 +265,6 @@ def find_all_frequent_packet_sequences(hex_string_list, min_acc, max_acc, length
         all_packet_indices_dict.update(packet_indices_dict)
 
     return all_results, all_packet_indices_dict
-
 
 
 def update_result(hex_string_list, result):
@@ -289,11 +343,8 @@ def filter_subset_sequences(result):
     return filtered_result
 
 
-import matplotlib.ticker as ticker
+def draw_graph(hex_string_list, filtered_result):
 
-def draw_graph(hex_string_list, filtered_result, protocol_name):
-
-    # Increase the default font size
     plt.rcParams.update({'font.size': 20})
 
     # 가로축과 세로축의 크기 설정
@@ -328,109 +379,6 @@ def draw_graph(hex_string_list, filtered_result, protocol_name):
     ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))  # Set the locator of major ticks.
 
     ax.imshow(graph, aspect='auto')  # Display data as an image.
-    ax.set_xlabel('Frame Length', fontsize=28)  # Set the label for the x-axis.
-    ax.set_ylabel('Frame Index', fontsize=28)  # Set the label for the y-axis.
-    ax.set_title(protocol_name, fontsize=28)  # Set a title for the axes.
-    plt.show()  # Display the figure.
-
-
-
-#빈도율 30%으로 실행  (페이로드 구분용!!)
-
-# 인조 TCP 같은경우 실제로 173위치부터 페이로드 시작함 (주의 : 패킷 제네레이터 돌릴때마다 값이 달라질 수 있음!!) <- 0.3 으로 설정시 ㅇㅋ
-# 인조 ICMP 같은 경우 실제로 84위치쯤부터 페이로드 시작하지만 그 앞에 시퀀스 넘버가 있어서 81으로 인식함
-tmp_min_acc = 0.33
-tmp_max_acc = 1.0
-
-tmp_lengths = [16,20,24,28,32,36,40,44,48,52,56,60]  # 최소길이 ~ 최대길이
-tmp_result, tmp_packet_indices_dict = find_all_frequent_packet_sequences_for_payload(tmp_hex_string_list, tmp_min_acc, tmp_max_acc, tmp_lengths)
-update_result(tmp_hex_string_list, tmp_result)
-
-tmp_filtered_result = filter_sequences(tmp_result)
-tmp_filtered_result = filter_same_suffix_and_frequency(tmp_filtered_result)
-tmp_filtered_result = filter_subset_sequences(tmp_filtered_result)
-
-
-payload_startAt = 0
-
-for i in tmp_filtered_result:
-    if(i["startAt"] + (i["length"] / 4) > payload_startAt):
-        payload_startAt = i["startAt"] + (i["length"] / 4)
-
-payload_startAt = int(payload_startAt)
-
-
-draw_graph(hex_string_list[:20], tmp_filtered_result, protocol_name)
-
-if payload_startAt % 2 == 0:
-    payload_startAt = payload_startAt + 1
-
-if(payload_startAt >= len(hex_string_list[0])):
-    print("페이로드 영역 없음")
-else:
-    print("페이로드 시작점 : ", payload_startAt)
-    hex_string_list = [s[:payload_startAt + 1] for s in hex_string_list]
-
-
-draw_graph(hex_string_list, tmp_filtered_result, protocol_name)
-
-
-
-#페이로드 제거한 영역으로 실행
-
-min_acc = 0.5
-max_acc = 1.0
-
-lengths = [8,12,16,20,24,28,32,36,40,44,48]  # 최소길이 ~ 최대길이
-result, packet_indices_dict = find_all_frequent_packet_sequences(hex_string_list, min_acc, max_acc, lengths)
-update_result(hex_string_list, result)
-
-min_acc2 = 0.6
-max_acc2 = 1.0
-result2, packet_indices_dict2 = find_all_frequent_packet_sequences(hex_string_list, min_acc2, max_acc2, lengths)
-update_result(hex_string_list, result2)
-
-sum_result = result2 + result
-
-
-filtered_result = sum_result;
-filtered_result = filter_sequences(sum_result)
-filtered_result = filter_same_suffix_and_frequency(filtered_result)
-filtered_result = filter_subset_sequences(filtered_result)
-
-filtered_result.sort(key=lambda x: (x['startAt'], -float(x['Frequency'][:-1])))
-
-
-# Group data based on length and frequency
-groups = {}
-for item in filtered_result:
-    key = (item['length'], item['Frequency'])
-    if key not in groups:
-        groups[key] = []
-    groups[key].append(item)
-
-# Process groups according to your criteria
-result = []
-for key, group in groups.items():
-    if group[0]['Frequency'] == '100.0%':
-        group.sort(key=lambda x: x['startAt'])
-        sequence = group[0]['The frequent sequence']
-        for i in range(1, len(group)):
-            if group[i]['startAt'] == group[i-1]['startAt'] + 1:
-                sequence += group[i]['The frequent sequence'][-1]
-        result.append({
-            'length': len(sequence) * 4,
-            'The frequent sequence': sequence,
-            'Frequency': group[0]['Frequency'],
-            'startAt': group[0]['startAt'],
-            'Packet Indices': group[0]['Packet Indices'],
-        })
-    else:
-        result.append(min(group, key=lambda x: x['startAt']))
-
-
-for i in result:
-    print(i["The frequent sequence"] + ", Frequency : " + i["Frequency"] + ", startAt : " + str(i["startAt"]))
-
-draw_graph(hex_string_list, result, protocol_name)
-
+    ax.set_xlabel('Frame Length', fontsize=28)
+    ax.set_ylabel('Frame Index', fontsize=28)
+    plt.show()
