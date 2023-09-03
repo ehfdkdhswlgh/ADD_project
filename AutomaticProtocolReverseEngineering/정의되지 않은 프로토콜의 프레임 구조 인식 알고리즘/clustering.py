@@ -1,7 +1,6 @@
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import AgglomerativeClustering
 from scipy.cluster.hierarchy import dendrogram, linkage
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -21,7 +20,7 @@ def convert_hex_strings_to_dec_list(hex_string_list):
     return result_list
 
 
-def adjust_array_lengths(arrays,avg_len):# 배열 평균 길이에 맞춰서 자르기 및 0으로 padding 하기
+def adjust_array_lengths(arrays,avg_len): # 배열 평균 길이에 맞춰서 자르기 및 0으로 padding 하기
     # 배열 길이 수정
     for i in range(len(arrays)):
         if len(arrays[i]) >= avg_len:
@@ -32,7 +31,7 @@ def adjust_array_lengths(arrays,avg_len):# 배열 평균 길이에 맞춰서 자
     return arrays
 
 
-def find_average_length(arrays): #배열의 평균 길이 탐색
+def find_average_length(arrays): # 배열의 평균 길이 탐색
     total_length = sum(len(array) for array in arrays)
     average_length = total_length / len(arrays)
     return average_length
@@ -98,14 +97,11 @@ def perform_hierarchical_clustering(result_list, k):
 
 # 같은 군집끼리 그룹화 수행
 def group_by_cluster_labels(hex_string_list, cluster_labels):
-    # 군집의 수를 자동으로 판단합니다. max 함수를 이용하여 가장 큰 라벨 값을 찾고, 1을 더해줍니다.
+    # 군집의 수를 자동으로 판단
     num_clusters = max(cluster_labels) + 1
 
-    # 빈 리스트로 초기화된 결과 리스트를 생성합니다.
     cluster_groups = [[] for _ in range(num_clusters)]
 
-    # 군집 라벨과 hex_string을 같이 순회하면서,
-    # 해당 라벨의 인덱스에 hex_string을 추가합니다.
     for label, hex_string in zip(cluster_labels, hex_string_list):
         cluster_groups[label].append(hex_string)
 

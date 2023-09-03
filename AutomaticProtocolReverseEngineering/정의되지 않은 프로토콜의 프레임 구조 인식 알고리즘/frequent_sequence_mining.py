@@ -120,29 +120,27 @@ def find_frequent_packet_sequences_for_payload(hex_string_list, min_acc, max_acc
             if count > 0:
                 state_tree[sequence] += 1
 
-    # supp_min = (n - length + 1) / (2 ** length) * min_acc
     D = []
     seen_sequences = set()
 
-    # Initialize a dictionary to store the indices of packets containing each frequent sequence
     packet_indices_dict = defaultdict(list)
 
     for sequence, count in state_tree.items():
         hex_sequence = f"{int(sequence, 2):0{length // 4}X}"
         if hex_sequence not in seen_sequences:
-            # Find the indices of packets containing the frequent sequence
+
             packet_indices = [i for i, hex_string in enumerate(hex_string_list) if hex_sequence.lower() in hex_string.lower()]
             packet_indices_dict[hex_sequence] = packet_indices
 
-            # Calculate the new frequency percentage based on the actual packet occurrences
+
             freq_percentage = (len(packet_indices) / n) * 100
             if min_acc * 100 <= freq_percentage <= max_acc * 100:
-                # Check if the current sequence can be merged with the previous sequence
+
                 if D and can_be_merged(D[-1]["The frequent sequence"], hex_sequence, hex_string_list):
                     merged_sequence = merge_sequences(D[-1]["The frequent sequence"], hex_sequence)
                     D[-1]["The frequent sequence"] = merged_sequence
                     D[-1]["length"] = len(merged_sequence) * 4
-                    # Update Packet Indices for the merged sequence
+
                     D[-1]["Packet Indices"] = list(set(D[-1]["Packet Indices"]).union(packet_indices))
                 else:
                     D.append({
@@ -173,17 +171,17 @@ def find_frequent_packet_sequences(hex_string_list, min_acc, max_acc, length):
     D = []
     seen_sequences = set()
 
-    # Initialize a dictionary to store the indices of packets containing each frequent sequence
+
     packet_indices_dict = defaultdict(list)
 
     for sequence, count in state_tree.items():
         hex_sequence = f"{int(sequence, 2):0{length // 4}X}"
         if hex_sequence not in seen_sequences:
-            # Find the indices of packets containing the frequent sequence
+
             packet_indices = [i for i, hex_string in enumerate(hex_string_list) if hex_sequence.lower() in hex_string.lower()]
             packet_indices_dict[hex_sequence] = packet_indices
 
-            # Calculate the new frequency percentage based on the actual packet occurrences
+
             freq_percentage = (len(packet_indices) / n) * 100
             if min_acc * 100 <= freq_percentage <= max_acc * 100:
                 D.append({
@@ -193,12 +191,12 @@ def find_frequent_packet_sequences(hex_string_list, min_acc, max_acc, length):
                     "Packet Indices": packet_indices,
                 })
                 seen_sequences.add(hex_sequence)
-            # Check all sub-sequences
+
             for sub_length in range(length - 4, 3, -4):
                 sub_sequence = sequence[:sub_length]
                 sub_hex_sequence = f"{int(sub_sequence, 2):0{sub_length // 4}X}"
                 if sub_hex_sequence not in seen_sequences:
-                    # Find the indices of packets containing the sub-sequence
+
                     sub_packet_indices = [i for i, hex_string in enumerate(hex_string_list) if sub_hex_sequence.lower() in hex_string.lower()]
                     sub_freq_percentage = (len(sub_packet_indices) / n) * 100
                     if min_acc * 100 <= sub_freq_percentage <= max_acc * 100:
@@ -280,23 +278,23 @@ def update_result(hex_string_list, result):
         seq_info["Packet Indices"] = indices
         seq_info["Frequency"] = f'{count / len(hex_string_list) * 100:.1f}%'
 
-        # Find the starting index of "The frequent sequence" in the first packet
+
         first_index = indices[0]
         first_hex_string = hex_string_list[first_index]
         start_at = first_hex_string.find(seq)
 
-        # Add the starting index to the seq_info dictionary
+
         seq_info["startAt"] = start_at
 
 
 def filter_sequences(result):
-    # Group sequences by 'startAt' and 'Frequency'
+
     groups = defaultdict(list)
     for seq_info in result:
         key = (seq_info['startAt'], seq_info['Frequency'])
         groups[key].append(seq_info)
 
-    # Select the sequence with the longest length from each group
+
     filtered_result = []
     for group in groups.values():
         longest_seq = max(group, key=lambda x: x['length'])
@@ -306,15 +304,15 @@ def filter_sequences(result):
 
 
 def filter_same_suffix_and_frequency(result):
-    # Group sequences by the last 4 digits and 'Frequency'
+
     groups = defaultdict(list)
     for seq_info in result:
-        # Extract the last 4 digits from 'The frequent sequence'
+
         last_four_digits = seq_info['The frequent sequence'][-4:]
         key = (last_four_digits, seq_info['Frequency'])
         groups[key].append(seq_info)
 
-    # Select the sequence with the longest length from each group
+
     filtered_result = []
     for group in groups.values():
         longest_seq = max(group, key=lambda x: x['length'])
@@ -324,20 +322,20 @@ def filter_same_suffix_and_frequency(result):
 
 
 def filter_subset_sequences(result):
-    # Create a list to hold the final results
+
     filtered_result = []
 
-    # Sort the sequences in descending order of length
+
     sorted_result = sorted(result, key=lambda x: x['length'], reverse=True)
 
     for i, seq_info in enumerate(sorted_result):
-        # Get the current sequence and frequency
+
         curr_sequence = seq_info['The frequent sequence']
         curr_freq = seq_info['Frequency']
 
-        # Check if the current sequence is a subset of any longer sequence with the same frequency
+
         if not any(curr_sequence in other['The frequent sequence'] and curr_freq == other['Frequency'] for other in sorted_result[:i]):
-            # If not, add the current sequence to the filtered results
+
             filtered_result.append(seq_info)
 
     return filtered_result
@@ -347,21 +345,17 @@ def draw_graph(hex_string_list, filtered_result):
 
     plt.rcParams.update({'font.size': 20})
 
-    # 가로축과 세로축의 크기 설정
     width = len(hex_string_list[0])
     height = len(hex_string_list)
 
-    # 그래프를 흰색으로 초기화
     graph = np.ones((height, width, 3))
 
-    # 모든 가능한 색상을 가져와서 랜덤하게 섞기. 흰색과 가까운 색은 제외
     white_rgb = np.array([1, 1, 1])
-    threshold = 0.7  # 이 값은 흰색에 가까운 색상을 어느 정도로 정의할 것인지를 결정. 값이 작을수록 흰색에 더 가까운 색상을 제외.
+    threshold = 0.7
     all_colors = [color for color in mcolors.CSS4_COLORS.keys()
                   if np.linalg.norm(white_rgb - np.array(mcolors.to_rgb(color))) > threshold]
     random.shuffle(all_colors)
 
-    # 빈번한 시퀀스를 그래프에 색칠하기
     for seq_num, seq_info in enumerate(filtered_result):
         # 빈번한 시퀀스마다 랜덤한 색상 선택
         color = mcolors.to_rgb(all_colors[seq_num % len(all_colors)])
@@ -372,11 +366,11 @@ def draw_graph(hex_string_list, filtered_result):
             end_at = start_at + length
 
             for pos in range(start_at, end_at):
-                graph[packet_idx, pos] = color  # 랜덤 색상으로 칠하기
+                graph[packet_idx, pos] = color
 
     fig, ax = plt.subplots()  # Create a figure and an axes.
-    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))  # Set the locator of major ticks.
-    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))  # Set the locator of major ticks.
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
     ax.imshow(graph, aspect='auto')  # Display data as an image.
     ax.set_xlabel('Frame Length', fontsize=28)
